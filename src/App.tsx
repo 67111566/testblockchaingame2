@@ -105,36 +105,70 @@ export default function App() {
     }
   };
 
-  const fetchWeapons = useCallback(async (userAddress: string) => {
-    if (!userAddress) return;
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ITEM_WEAPON_ABI, provider);
-      
-      const weaponData = await contract.getMyWeapons();
-      // Since our contract doesn't return TokenIDs in getMyWeapons easily 
-      // (it returns an array of Weapon structs), we'll have to correlate or 
-      // just display what we have. For this demo, we'll map them.
-      
-      const mappedWeapons: Weapon[] = weaponData.map((w: any, index: number) => ({
-        tokenId: index, // Approximation for this demo
-        itemName: w.itemName,
-        description: w.description,
-        image: w.image,
-        isUsed: w.isUsed,
-        owner: w.owner,
-        // Mock stats based on the description or index for variety
-        stats: { 
-          atk: 10 + (index * 5) % 40, 
-          def: 2 + (index * 2) % 15 
-        }
-      }));
-      
-      setWeapons(mappedWeapons);
-    } catch (err) {
-      console.error("Fetch weapons error:", err);
+const fetchWeapons = useCallback(async (userAddress: string) => {
+  if (!userAddress || typeof window.ethereum === "undefined") return;
+
+  try {
+    console.log("Fetching weapons for:", userAddress);
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+
+    // ✅ ใช้ signer เพื่อให้ msg.sender ถูกต้อง
+    const signer = await provider.getSigner();
+    const signerAddress = await signer.getAddress();
+    console.log("Signer address:", signerAddress);
+
+    // ✅ Debug: เช็คว่า contract มีอยู่จริงไหม
+    const code = await provider.getCode(CONTRACT_ADDRESS);
+    console.log("Contract code:", code);
+
+    if (code === "0x") {
+      throw new Error("Contract not found at this address (wrong network or address)");
     }
-  }, []);
+
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      ITEM_WEAPON_ABI,
+      signer // ✅ FIX สำคัญ
+    );
+
+    // ✅ call function
+    const weaponData = await contract.getMyWeapons();
+    console.log("Raw weapon data:", weaponData);
+
+    // ✅ กัน undefined / empty
+    if (!weaponData || weaponData.length === 0) {
+      setWeapons([]);
+      return;
+    }
+
+    // ✅ map ข้อมูล
+    const mappedWeapons: Weapon[] = weaponData.map((w: any, index: number) => ({
+      tokenId: index,
+      itemName: w.itemName,
+      description: w.description,
+      image: w.image,
+      isUsed: w.isUsed,
+      owner: w.owner,
+      stats: { 
+        atk: 10 + (index * 5) % 40, 
+        def: 2 + (index * 2) % 15 
+      }
+    }));
+
+    setWeapons(mappedWeapons);
+
+  } catch (err: any) {
+    console.error("Fetch weapons error:", err);
+
+    // ✅ แสดง error ที่อ่านง่ายขึ้น
+    if (err.code === "BAD_DATA") {
+      setError("Contract call failed (wrong ABI or address)");
+    } else {
+      setError(err.message || "Failed to fetch weapons");
+    }
+  }
+}, []);
 
   const mintWeapon = async (item: typeof SHOP_ITEMS[0]) => {
     if (!account) return;
