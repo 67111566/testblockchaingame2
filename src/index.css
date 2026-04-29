@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --background-game: url('https://res.cloudinary.com/dkyzhwy4w/image/upload/v1760088968/background_me6s3b.jpg');
+}
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans;
+    background-image: var(--background-game);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+}
+
+.game-card {
+  @apply relative overflow-hidden rounded-xl border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300;
+}
+
+.glass-panel {
+  @apply bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl;
+}
+
+.pixel-shadow {
+  filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
+}
